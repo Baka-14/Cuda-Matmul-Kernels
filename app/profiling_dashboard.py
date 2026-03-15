@@ -26,7 +26,7 @@ st.set_page_config(
     page_title="NCU Profiling Dashboard",
     page_icon="🔬",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # ── Light Theme CSS ──
@@ -112,7 +112,16 @@ st.markdown("""
         text-transform: uppercase;
         margin: 24px 0 12px 0;
     }
-    div[data-testid="stSidebar"] { background-color: #ffffff; border-right: 1px solid #e2e8f0; }
+    /* Hide sidebar completely — no sidebar at all */
+    section[data-testid="stSidebar"],
+    div[data-testid="stSidebar"],
+    [data-testid="stSidebarContent"],
+    [data-testid="stSidebar"] { display: none !important; width: 0 !important; min-width: 0 !important; }
+    /* Hide the expand/collapse sidebar button */
+    button[kind="header"] { display: none !important; }
+    [data-testid="collapsedControl"] { display: none !important; }
+    /* Main content full width */
+    .block-container { max-width: 100% !important; padding-left: 1rem !important; padding-right: 1rem !important; }
     .stTabs [data-baseweb="tab-list"] { gap: 8px; }
     .stTabs [data-baseweb="tab"] {
         font-family: 'JetBrains Mono', monospace;
