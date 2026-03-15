@@ -42,7 +42,7 @@ Profiling was done on an **NVIDIA GeForce RTX 4050 Laptop GPU** (1024×1024 matr
 - The naive kernel has **more issues** (7 vs 6) and a higher estimated speedup headroom (43% vs 3%), meaning the tiled version is already closer to optimal for this setup.
 - Tiled uses more **shared memory** (higher occupancy impact) but gains from much better data reuse.
 
-The table above summarizes high level metrics. **A deeper analysis** bottleneck diagnosis (memory vs compute bound), instruction pipeline and occupancy comparison, speedup ratios, and downloadable comparison CSV **is available when you run the Streamlit app** (see below). You can also open the raw CSV/PDF reports in `profiling/` for full Nsight Compute detail.
+The table above summarizes high-level metrics. **A deeper analysis**—bottleneck diagnosis (memory- vs compute-bound), instruction-pipeline and occupancy comparison, speedup ratios, interactive Plotly charts (throughput, cycles, stalls, memory), and downloadable comparison CSV—**is available when you run the Streamlit app** (see below). The dashboard uses tabs (Overview, Memory, Stalls, Config) and supports either uploading CSVs in the sidebar or auto-loading from `profiling/raw/`. You can also open the raw CSV/PDF reports in `profiling/` for full Nsight Compute detail.
 
 ---
 
@@ -77,7 +77,7 @@ nvcc -o matmul_tiled src/matmul_tiled.cu
 
 ## Running the Streamlit profiling dashboard
 
-The dashboard reads the CSV files in `profiling/raw/` and shows comparison tables and key metrics.
+The dashboard reads the CSV files in `profiling/raw/` (or lets you upload them in the sidebar) and shows comparison tables, key metrics, and interactive Plotly charts. Dependencies include **Streamlit**, **pandas**, and **Plotly** (see `app/requirements.txt`).
 
 **Steps:**
 

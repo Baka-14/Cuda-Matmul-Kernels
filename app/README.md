@@ -1,6 +1,8 @@
 # Profiling dashboard
 
-Streamlit app that loads Nsight Compute raw-dump CSVs from `profiling/raw/` and shows kernel comparison and metrics.
+Streamlit app that loads Nsight Compute raw-dump CSVs and shows kernel comparison, metrics, and **interactive Plotly charts** (Overview, Memory, Stalls, Config tabs).
+
+**Dependencies:** `streamlit`, `pandas`, `plotly` (see `requirements.txt`).
 
 ## Run locally
 
@@ -15,7 +17,7 @@ pip install -r app/requirements.txt
 streamlit run app/profiling_dashboard.py
 ```
 
-Then open the URL shown (usually http://localhost:8501).
+Then open the URL shown (usually http://localhost:8501). Use the **sidebar** to upload the Naive and Tiled CSV files (e.g. from `profiling/raw/`) if the app does not auto-detect them in the current directory.
 
 ## One-liner (if dependencies are already installed)
 
@@ -23,4 +25,4 @@ Then open the URL shown (usually http://localhost:8501).
 streamlit run app/profiling_dashboard.py
 ```
 
-The app resolves paths relative to the project root, so run the command from the repository root directory.
+Run the command from the repository root so paths and uploads work as expected.
