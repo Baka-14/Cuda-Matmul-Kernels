@@ -2,6 +2,8 @@
 
 CUDA implementations of matrix multiplication: **naive** and **tiled** (shared-memory) kernels, with Nsight Compute profiling and a Streamlit dashboard to explore the raw dumps.
 
+Shoutout to my roommate **Aadesh** for lending his laptop to tinker with kernels and their optimisations :)
+
 ---
 
 ## What is matrix multiplication?
@@ -36,11 +38,11 @@ Profiling was done on an **NVIDIA GeForce RTX 4050 Laptop GPU** (1024×1024 matr
 | **Tiled** | 2.78 | 3.30% | 6 |
 
 - **Tiled is ~24% faster** than naive (2.78 ms vs 3.66 ms) for the same problem size.
-- Both kernels are **memory-bound**: SM and memory throughput are near peak (~96–98%), so gains come from reducing global memory traffic via shared-memory tiling.
+- Both kernels are **memory bound**: SM and memory throughput are near peak (~96–98%), so gains come from reducing global memory traffic via shared-memory tiling.
 - The naive kernel has **more issues** (7 vs 6) and a higher estimated speedup headroom (43% vs 3%), meaning the tiled version is already closer to optimal for this setup.
 - Tiled uses more **shared memory** (higher occupancy impact) but gains from much better data reuse.
 
-To explore all metrics yourself, use the **Streamlit profiling dashboard** (see below) or open the CSV/PDF reports in `profiling/`.
+The table above summarizes high level metrics. **A deeper analysis** bottleneck diagnosis (memory vs compute bound), instruction pipeline and occupancy comparison, speedup ratios, and downloadable comparison CSV **is available when you run the Streamlit app** (see below). You can also open the raw CSV/PDF reports in `profiling/` for full Nsight Compute detail.
 
 ---
 
@@ -61,11 +63,6 @@ To explore all metrics yourself, use the **Streamlit profiling dashboard** (see 
     ├── requirements.txt
     └── README.md
 ```
-
-**Where is the README?**  
-The main **README.md** lives at the **repository root**. GitHub/GitLab and most IDEs show it when you open the repo, so it’s the right place for a short overview, concepts, build/run instructions, and pointers to the rest of the project (e.g. `app/`, `profiling/`).
-
----
 
 ## Building the CUDA kernels
 
@@ -97,10 +94,4 @@ The dashboard reads the CSV files in `profiling/raw/` and shows comparison table
    ```
 4. Open the URL printed in the terminal (usually **http://localhost:8501**).
 
-**One-liner** (if Python and pip are already set up):
-
-```bash
-pip install -r app/requirements.txt && streamlit run app/profiling_dashboard.py
-```
-
-Always run `streamlit run app/profiling_dashboard.py` from the **project root** so the app can find `profiling/raw/`.
+Note: Always run `streamlit run app/profiling_dashboard.py` from the **project root** so the app can find `profiling/raw/`.

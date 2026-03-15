@@ -190,6 +190,80 @@ def main():
         ]
         for bullet in insights:
             st.markdown(f"- {bullet}")
+
+        # ----- Deeper analysis -----
+        st.header("Deeper analysis")
+
+        # Bottleneck diagnosis
+        st.subheader("Bottleneck diagnosis")
+        sm_naive = naive_row.get("SM throughput (%)") or 0
+        sm_tiled = tiled_row.get("SM throughput (%)") or 0
+        mem_naive = naive_row.get("Memory throughput (%)") or 0
+        mem_tiled = tiled_row.get("Memory throughput (%)") or 0
+        for label, sm, mem in [("Naive", sm_naive, mem_naive), ("Tiled", sm_tiled, mem_tiled)]:
+            if sm >= 90 and mem >= 90:
+                diagnosis = "Memory-bound (both SM and memory near peak)"
+            elif mem > sm + 10:
+                diagnosis = "Memory-bound (memory throughput dominates)"
+            elif sm > mem + 10:
+                diagnosis = "Compute-bound (SM throughput dominates)"
+            else:
+                diagnosis = "Balanced"
+            st.markdown(f"- **{label}**: {diagnosis} — SM {sm:.1f}%, Mem {mem:.1f}%")
+
+        # Speedup ratio
+        st.subheader("Speedup ratio (Tiled vs Naive)")
+        ratio = t_naive / t_tiled if t_tiled and t_tiled > 0 else 0
+        st.metric("Runtime speedup", f"{ratio:.2f}×", help="Naive runtime ÷ Tiled runtime; >1 means Tiled is faster")
+
+        # Extended metrics comparison (from raw dumps)
+        st.subheader("Extended metrics comparison")
+        extended_keys = [
+            ("gpc__cycles_elapsed.max [cycle]", "Cycles (max)"),
+            ("derived__pct_occupancy_per_shared_mem_size [%/Kbyte]", "Occupancy limit (shared mem)"),
+            ("derived__shared_spilling_requests", "Shared mem spill requests"),
+            ("SM_A.TriageAC.sm__cycles_active.avg.per_cycle_elapsed", "SM cycles active/elapsed"),
+            ("TriageAC.tpc__warps_active_realtime.avg.per_cycle_elapsed [warp]", "Warps active/cycle (avg)"),
+        ]
+        ext_rows = []
+        for key, short_name in extended_keys:
+            v_naive = metrics.get("Naive", {}).get(key, "—")
+            v_tiled = metrics.get("Tiled", {}).get(key, "—")
+            ext_rows.append({"Metric": short_name, "Naive": v_naive, "Tiled": v_tiled})
+        if ext_rows:
+            st.dataframe(pd.DataFrame(ext_rows), use_container_width=True, hide_index=True)
+
+        # Instruction pipeline utilization (if present)
+        pipe_keys = [
+            ("SM_A.TriageSCG.sm__inst_executed_pipe_alu_realtime.avg.pct_of_peak_sustained_elapsed [%]", "ALU"),
+            ("SM_C.TriageSCG.smsp__inst_executed_pipe_fmaheavy.avg.pct_of_peak_sustained_elapsed [%]", "FMA heavy"),
+            ("SM_C.TriageSCG.smsp__inst_executed_pipe_fmalite.avg.pct_of_peak_sustained_elapsed [%]", "FMA lite"),
+        ]
+        pipe_rows = []
+        for key, short_name in pipe_keys:
+            v_naive = safe_float(metrics.get("Naive", {}).get(key))
+            v_tiled = safe_float(metrics.get("Tiled", {}).get(key))
+            if v_naive is not None or v_tiled is not None:
+                pipe_rows.append({
+                    "Pipeline": short_name,
+                    "Naive (%)": f"{v_naive:.1f}" if v_naive is not None else "—",
+                    "Tiled (%)": f"{v_tiled:.1f}" if v_tiled is not None else "—",
+                })
+        if pipe_rows:
+            st.subheader("Instruction pipeline utilization (% of peak)")
+            st.dataframe(pd.DataFrame(pipe_rows), use_container_width=True, hide_index=True)
+
+        # Download comparison CSV
+        st.subheader("Export")
+        comp_export = df[["Kernel", "Runtime (ms)", "Est. speedup (%)", "Issues", "SM throughput (%)", "Memory throughput (%)"]].copy()
+        comp_export = comp_export.rename(columns={
+            "Runtime (ms)": "Runtime_ms",
+            "Est. speedup (%)": "Est_speedup_pct",
+            "SM throughput (%)": "SM_throughput_pct",
+            "Memory throughput (%)": "Memory_throughput_pct",
+        })
+        csv_bytes = comp_export.to_csv(index=False).encode("utf-8")
+        st.download_button("Download comparison as CSV", data=csv_bytes, file_name="kernel_comparison.csv", mime="text/csv")
     else:
         st.info("Load both Naive and Tiled dumps to see comparison analysis and charts.")
 
