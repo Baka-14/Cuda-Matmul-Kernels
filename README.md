@@ -1,38 +1,106 @@
 # Matrix Multiplication CUDA Kernels
 
-CUDA implementations of matrix multiplication: naive and tiled (shared-memory) kernels.
+CUDA implementations of matrix multiplication: **naive** and **tiled** (shared-memory) kernels, with Nsight Compute profiling and a Streamlit dashboard to explore the raw dumps.
+
+---
+
+## What is matrix multiplication?
+
+For matrices **A** (M×K) and **B** (K×N), the product **C = A×B** has shape M×N. Each element  
+**C[i][j]** is the dot product of row *i* of A and column *j* of B. It’s compute-heavy (O(M·K·N) ops) and highly parallel, so GPUs are a good fit.
+
+---
+
+## Naive method
+
+In the **naive** kernel, each thread computes **one** element of C. It repeatedly reads from **global memory** (VRAM): one full row of A and one full column of B per thread. That causes many redundant, high-latency loads and leaves most of the GPU’s potential unused.
+
+---
+
+## How tiling and loop unrolling help
+
+- **Tiling (shared memory):** Data is loaded in small **tiles** (e.g. 16×16) into **shared memory**, which is much faster than global memory. Threads in a block cooperate to fill the tiles, then reuse that data for many multiplies. That cuts global traffic and improves throughput.
+- **Loop unrolling:** The inner loop over the tile dimension can be **unrolled** (manually or by the compiler), reducing branch and loop overhead and improving instruction throughput.
+
+Together, tiling + unrolling typically give a noticeable speedup over the naive kernel (see insights below).
+
+---
+
+## Key insights from profiling (Nsight Compute)
+
+Profiling was done on an **NVIDIA GeForce RTX 4050 Laptop GPU** (1024×1024 matrices, 16×16 blocks/tiles).
+
+| Kernel | Runtime (ms) | Est. speedup vs baseline | Issues reported |
+|--------|--------------|---------------------------|-----------------|
+| **Naive** | 3.66 | 43.03% | 7 |
+| **Tiled** | 2.78 | 3.30% | 6 |
+
+- **Tiled is ~24% faster** than naive (2.78 ms vs 3.66 ms) for the same problem size.
+- Both kernels are **memory-bound**: SM and memory throughput are near peak (~96–98%), so gains come from reducing global memory traffic via shared-memory tiling.
+- The naive kernel has **more issues** (7 vs 6) and a higher estimated speedup headroom (43% vs 3%), meaning the tiled version is already closer to optimal for this setup.
+- Tiled uses more **shared memory** (higher occupancy impact) but gains from much better data reuse.
+
+To explore all metrics yourself, use the **Streamlit profiling dashboard** (see below) or open the CSV/PDF reports in `profiling/`.
+
+---
 
 ## Project structure
 
 ```
-├── src/                    # CUDA source files
-│   ├── matmul_naive.cu     # Naive kernel (one element per thread)
-│   └── matmul_tiled.cu     # Tiled kernel (shared memory)
-├── profiling/              # Profiling exports (Nsight Compute)
-│   ├── reports/            # PDF summaries
-│   │   ├── Naive Profiling Details.pdf
-│   │   └── Tiled Profiling Details.pdf
-│   ├── raw/                # CSV raw dumps
-│   │   ├── Naive Profiling Raw dump.csv
-│   │   └── Tiled Profiling Raw dump.csv
-│   ├── sessions/           # .ncu-rep session files
-│   │   ├── profile_naive.ncu-rep
-│   │   ├── profile_tiled.ncu-rep
-│   │   └── profile_unrolled.ncu-rep
+├── README.md                 # This file — first thing you see when opening the repo
+├── src/                      # CUDA source files
+│   ├── matmul_naive.cu
+│   └── matmul_tiled.cu
+├── profiling/                # Nsight Compute outputs
+│   ├── reports/              # PDF summaries
+│   ├── raw/                  # CSV raw dumps (used by the dashboard)
+│   ├── sessions/             # .ncu-rep session files
 │   └── README.md
-└── README.md
+└── app/                      # Streamlit profiling dashboard
+    ├── profiling_dashboard.py
+    ├── requirements.txt
+    └── README.md
 ```
 
-## Building
+**Where is the README?**  
+The main **README.md** lives at the **repository root**. GitHub/GitLab and most IDEs show it when you open the repo, so it’s the right place for a short overview, concepts, build/run instructions, and pointers to the rest of the project (e.g. `app/`, `profiling/`).
 
-From the project root, compile from `src/`:
+---
+
+## Building the CUDA kernels
+
+From the project root:
 
 ```bash
 nvcc -o matmul_naive src/matmul_naive.cu
 nvcc -o matmul_tiled src/matmul_tiled.cu
 ```
 
-## Kernels
+---
 
-- **Naive**: Each thread computes one element of C; reads from global memory.
-- **Tiled**: Uses shared memory tiles (16×16) for better memory reuse and performance.
+## Running the Streamlit profiling dashboard
+
+The dashboard reads the CSV files in `profiling/raw/` and shows comparison tables and key metrics.
+
+**Steps:**
+
+1. Open a terminal and go to the **project root** (the folder that contains `src/`, `profiling/`, and `app/`).
+2. (Optional) Create and activate a virtual environment:
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate   # Windows: .venv\Scripts\activate
+   ```
+3. Install dependencies and run Streamlit:
+   ```bash
+   pip install -r app/requirements.txt
+   streamlit run app/profiling_dashboard.py
+   ```
+4. Open the URL printed in the terminal (usually **http://localhost:8501**).
+
+**One-liner** (if Python and pip are already set up):
+
+```bash
+pip install -r app/requirements.txt && streamlit run app/profiling_dashboard.py
+```
+
+Always run `streamlit run app/profiling_dashboard.py` from the **project root** so the app can find `profiling/raw/`.

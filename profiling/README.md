@@ -1,6 +1,7 @@
 # Profiling outputs
 
-Nsight Compute profiling data for the matrix multiplication kernels.
+Nsight Compute profiling data for the matrix multiplication kernels.  
+A **Streamlit dashboard** that loads these CSVs and compares kernels lives in **`../app/`** — see the main repo README for run instructions.
 
 
 | Folder        | Contents                                                                     |
